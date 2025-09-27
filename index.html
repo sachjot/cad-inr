@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CAD ⇄ INR (1 CAD = 64 INR)</title>
+<style>
+  *{box-sizing:border-box} body{margin:0;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto;background:#0e1117;color:#e6edf3}
+  .wrap{max-width:520px;margin:auto;padding:20px}
+  h1{font-size:18px;margin:0 0 12px}
+  .card{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:14px}
+  label{font-size:12px;color:#9aa4b2}
+  input{width:100%;padding:12px;margin:6px 0 12px;border-radius:10px;border:1px solid #253046;background:#0b1020;color:#e6edf3}
+  input[readonly]{opacity:.85}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .muted{font-size:12px;color:#9aa4b2}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CAD ⇄ INR (fixed rate)</h1>
+  <div class="card">
+    <div class="muted">Using preset: 1 CAD = 64 INR</div>
+
+    <div class="row">
+      <div>
+        <label>Amount in CAD</label>
+        <input id="cad" type="number" inputmode="decimal" step="0.01" value="1.00">
+      </div>
+      <div>
+        <label>Amount in INR</label>
+        <input id="inr" type="number" inputmode="decimal" step="0.01">
+      </div>
+    </div>
+
+    <label>CAD amount (in words)</label>
+    <input id="wordsCad" type="text" readonly>
+
+    <label>INR amount (in words)</label>
+    <input id="wordsInr" type="text" readonly>
+  </div>
+</div>
+
+<script>
+(() => {
+  const RATE = 64;
+  const cadEl = document.getElementById('cad');
+  const inrEl = document.getElementById('inr');
+  const wordsCad = document.getElementById('wordsCad');
+  const wordsInr = document.getElementById('wordsInr');
+  let updating=false;
+
+  // --- number to words helpers ---
+  const ONES=['zero','one','two','three','four','five','six','seven','eight','nine'];
+  const TEENS=['ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+  const TENS=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+
+  function chunk(n){if(n===0)return'';let s='';const h=Math.floor(n/100),r=n%100;if(h)s+=ONES[h]+' hundred ';if(r<10&&r>0)s+=ONES[r];else if(r<20)s+=TEENS[r-10];else if(r>=20){s+=TENS[Math.floor(r/10)];if(r%10)s+='-'+ONES[r%10]}return s.trim();}
+  function wordsIntl(num){if(num===0)return'zero';const S=['','thousand','million','billion'];let i=0,parts=[];while(num>0){const c=num%1000;if(c)parts.unshift(chunk(c)+(S[i]?' '+S[i]:''));num=Math.floor(num/1000);i++;}return parts.join(' ');}
+  function wordsIndian(num){if(num===0)return'zero';const U=['','thousand','lakh','crore'];let parts=[];const last3=num%1000;let rest=Math.floor(num/1000);if(last3)parts.unshift(chunk(last3));let idx=1;while(rest>0){const two=rest%100;if(two)parts.unshift(chunk(two)+' '+U[idx]);rest=Math.floor(rest/100);idx++;}return parts.join(' ');}
+  function toWords(amount,curr){const a=Math.abs(amount);const major=Math.floor(a);const minor=Math.round((a-major)*100);if(curr==='INR'){return wordsIndian(major)+' '+(major===1?'rupee':'rupees')+(minor?(' and '+wordsIntl(minor)+' paise'):'');}else{return wordsIntl(major)+' '+(major===1?'Canadian dollar':'Canadian dollars')+(minor?(' and '+wordsIntl(minor)+' cents'):'');}}
+
+  function fmt(n){return Number.isFinite(n)?n.toFixed(2):'';}
+
+  function handleCAD(){
+    if(updating) return; const v=parseFloat(cadEl.value); updating=true;
+    if(isFinite(v)){ const inr=v*RATE; inrEl.value=fmt(inr); wordsCad.value=toWords(v,'CAD'); wordsInr.value=toWords(inr,'INR'); }
+    else{ inrEl.value=''; wordsCad.value=''; wordsInr.value=''; }
+    updating=false;
+  }
+  function handleINR(){
+    if(updating) return; const v=parseFloat(inrEl.value); updating=true;
+    if(isFinite(v)){ const cad=v/RATE; cadEl.value=fmt(cad); wordsCad.value=toWords(cad,'CAD'); wordsInr.value=toWords(v,'INR'); }
+    else{ cadEl.value=''; wordsCad.value=''; wordsInr.value=''; }
+    updating=false;
+  }
+
+  cadEl.addEventListener('input',handleCAD);
+  inrEl.addEventListener('input',handleINR);
+
+  // initial sync
+  handleCAD();
+})();
+</script>
+</body>
+</html>
